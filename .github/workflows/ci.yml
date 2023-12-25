@@ -48,7 +48,7 @@ jobs:
       uses: ncipollo/release-action@v1
       if: "contains(github.event.head_commit.message, 'chore: release') && github.event_name != 'pull_request'"
       with:
-        artifacts: "REPENTOGONUpdater.exe,hash.txt"
+        artifacts: "${{github.workspace}}/build/Release/REPENTOGONUpdater.exe,${{github.workspace}}/build/Release/hash.txt"
         tag: ${{steps.versioning.outputs.version}}
         token: ${{ secrets.GITHUB_TOKEN }}
           
