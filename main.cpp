@@ -111,6 +111,9 @@ int main() {
     std::transform(calculated_hash.begin(), calculated_hash.end(), calculated_hash.begin(),
         [](unsigned char c) { return std::tolower(c); });
 
+    std::transform(repentogon_hash.begin(), repentogon_hash.end(), repentogon_hash.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+
     if (repentogon_hash.compare(calculated_hash) == 0) {
         fprintf(stderr, "Hash mismatch, aborting!\nExpected hash: %s\nCalculated hash: %s\n", repentogon_hash.c_str(), calculated_hash.c_str());
         ERROR_DIALOG;

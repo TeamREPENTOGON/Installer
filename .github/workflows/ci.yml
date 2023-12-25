@@ -1,0 +1,59 @@
+name: Build Project and Upload Artifact
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+        fetch-depth: 0
+
+    - name: Configure CMake
+      run: cmake -G "Visual Studio 17 2022" -A "Win32" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Calculate SHA256
+      shell: powershell
+      run: |
+        cd ${{github.workspace}}/build/Release
+        Get-FileHash .\REPENTOGONUpdater.exe | Select-Object -ExpandProperty Hash > hash.txt
+    
+    - name: Determine next build number
+      uses: MCKanpolat/auto-semver-action@1.0.5
+      id: versioning
+      with:
+        releaseType: patch
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload release
+      uses: ncipollo/release-action@v1
+      if: "contains(github.event.head_commit.message, 'chore: release') && github.event_name != 'pull_request'"
+      with:
+        artifacts: "REPENTOGONUpdater.exe,hash.txt"
+        tag: ${{steps.versioning.outputs.version}}
+        token: ${{ secrets.GITHUB_TOKEN }}
+          
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: REPENTOGONInstaller
+        path: ${{github.workspace}}/build/Release/artifact/
+        retention-days: 30
+
