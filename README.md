@@ -1,0 +1,2 @@
+# REPENTOGON Installer
+This installs and updates REPENTOGON. This can be run manually in the Isaac directory to install REPENTOGON and this is downloaded and executed by the game if the user consents to automatic updates.
