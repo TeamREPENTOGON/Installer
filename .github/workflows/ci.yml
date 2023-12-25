@@ -54,6 +54,6 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: REPENTOGONInstaller
-        path: ${{github.workspace}}/build/Release/artifact/
+        path: ${{github.workspace}}/build/Release/REPENTOGONUpdater.exe
         retention-days: 30
 
