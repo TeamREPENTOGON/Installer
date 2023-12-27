@@ -6,6 +6,12 @@
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl2.h"
+#include <stdio.h>
+#include <GLFW/glfw3.h>
+
 using namespace rapidjson;
 
 #define ERROR_DIALOG MessageBoxA(NULL, "Update failed, please see the console for more info.", "REPENTOGON Updater", MB_OK);
@@ -16,8 +22,7 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
     return size * nmemb;
 }
 
-int main() {
-
+bool PerformUpdate() {
     CURL* curl;
     CURLcode res;
     std::string repentogon_zip;
@@ -46,14 +51,14 @@ int main() {
             fprintf(stderr, "Failed to check for updates: %s\n",
                 curl_easy_strerror(res));
             ERROR_DIALOG;
-            return EXIT_FAILURE;
+            return false;
         }
 
         doc.Parse(result.c_str());
         if (doc["name"].Empty()) {
             fprintf(stderr, "Failed to fetch latest release from the GitHub API. Returned JSON: %s\n", result.c_str());
             ERROR_DIALOG;
-            return EXIT_FAILURE;
+            return false;
         }
         result.clear();
 
@@ -61,7 +66,7 @@ int main() {
         std::string zip_url;
         for (const auto& asset : doc["assets"].GetArray()) {
 
-            if (std::string("hash.txt").compare(asset["name"].GetString()) == 0) 
+            if (std::string("hash.txt").compare(asset["name"].GetString()) == 0)
                 hash_url = asset["browser_download_url"].GetString();
             if (std::string("REPENTOGON.zip").compare(asset["name"].GetString()) == 0)
                 zip_url = asset["browser_download_url"].GetString();
@@ -70,7 +75,7 @@ int main() {
         if (hash_url.empty() || zip_url.empty()) {
             fprintf(stderr, "Unable to fetch URL of release or hash, updater cannot continue.\nHash URL: %s\nZip URL: %s", hash_url.c_str(), zip_url.c_str());
             ERROR_DIALOG;
-            return EXIT_FAILURE;
+            return false;
         }
 
         printf("Fetching hash from GitHub...\n");
@@ -82,7 +87,7 @@ int main() {
             fprintf(stderr, "Failed to download hash: %s\n",
                 curl_easy_strerror(res));
             ERROR_DIALOG;
-            return EXIT_FAILURE;
+            return false;
         }
         printf("Hash: %s\n", repentogon_hash.c_str());
 
@@ -94,10 +99,10 @@ int main() {
             fprintf(stderr, "Failed to download release: %s\n",
                 curl_easy_strerror(res));
             ERROR_DIALOG;
-            return EXIT_FAILURE;
+            return false;
         }
         curl_easy_cleanup(curl);
-        
+
     }
 
     CryptoPP::StringSource(repentogon_zip, true,
@@ -117,7 +122,7 @@ int main() {
     if (repentogon_hash.compare(calculated_hash) == 0) {
         fprintf(stderr, "Hash mismatch, aborting!\nExpected hash: %s\nCalculated hash: %s\n", repentogon_hash.c_str(), calculated_hash.c_str());
         ERROR_DIALOG;
-        return EXIT_FAILURE;
+        return false;
     }
 
     mz_zip_archive archive;
@@ -129,7 +134,7 @@ int main() {
     if (!status) {
         fprintf(stderr, "Downloaded zip file is invalid or corrupt, aborting.\n");
         ERROR_DIALOG;
-        return EXIT_FAILURE;
+        return false;
     }
 
     for (int i = 0; i < (int)mz_zip_reader_get_num_files(&archive); ++i) {
@@ -139,7 +144,7 @@ int main() {
             fprintf(stderr, "Failed to read file, aborting.\n");
             mz_zip_reader_end(&archive);
             ERROR_DIALOG;
-            return EXIT_FAILURE;
+            return false;
         }
 
         if (mz_zip_reader_is_file_a_directory(&archive, i))
@@ -150,7 +155,7 @@ int main() {
                 fprintf(stderr, "Failed to extract %s, aborting.\n", file_stat.m_filename);
                 mz_zip_reader_end(&archive);
                 ERROR_DIALOG;
-                return EXIT_FAILURE;
+                return false;
             }
         }
     }
@@ -161,5 +166,9 @@ int main() {
         //TODO relaunch isaac
     };
 
-    return EXIT_SUCCESS;
+    return true;
+}
+
+int main() { 
+    return PerformUpdate();
 }
