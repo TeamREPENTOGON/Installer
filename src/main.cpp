@@ -24,6 +24,7 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
 }
 
 LogViewer logViewer;
+bool updating;
 
 bool PerformUpdate() {
     CURL* curl;
@@ -116,8 +117,6 @@ bool PerformUpdate() {
     std::transform(repentogon_hash.begin(), repentogon_hash.end(), repentogon_hash.begin(),
         [](unsigned char c) { return std::tolower(c); });
 
-    logViewer.AddLog("Hash: %s\n", repentogon_hash.c_str());
-    printf("%s\n", repentogon_hash.c_str());
     if (repentogon_hash.compare(calculated_hash) == 0) {
         logViewer.AddLog("Hash mismatch, aborting!\nExpected hash: %s\nCalculated hash: %s\n", repentogon_hash.c_str(), calculated_hash.c_str());
         return false;
@@ -136,7 +135,7 @@ bool PerformUpdate() {
 
     for (int i = 0; i < (int)mz_zip_reader_get_num_files(&archive); ++i) {
         mz_zip_archive_file_stat file_stat;
-
+        logViewer.AddLog("Extracting %s\n", file_stat.m_filename);
         if (!mz_zip_reader_file_stat(&archive, i, &file_stat)) {
             logViewer.AddLog("Failed to read file, aborting.\n");
             mz_zip_reader_end(&archive);
@@ -162,6 +161,8 @@ bool PerformUpdate() {
         //TODO relaunch isaac
     }
 
+    logViewer.AddLog("Finished!\n");
+    updating = false;
     return true;
 }
 
@@ -170,6 +171,8 @@ static void glfw_error_callback(int error, const char* description) {
 }
 
 int main() { 
+
+
     glfwSetErrorCallback(glfw_error_callback);
 
     if (!glfwInit())
@@ -212,11 +215,15 @@ int main() {
 
             ImGui::Text("Welcome to the REPENTOGON Installer!");
 
-            if (ImGui::Button("Begin")) {
-                if (PerformUpdate()) {
-                    logViewer.AddLog("hell yeah\n");
-                }
+            if (updating)
+                ImGui::BeginDisabled();
+            if (ImGui::Button(updating ? "Installing..." : "Install")) {
+                updating = true;
+                std::thread downloader(PerformUpdate);
+                downloader.detach();
             }
+            if (updating)
+                ImGui::EndDisabled();
 
             ImGui::End();
 
