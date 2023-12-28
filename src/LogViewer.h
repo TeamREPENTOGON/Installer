@@ -18,21 +18,13 @@ struct LogViewer {
         autoscroll = true;
     }
 
-    void AddLog( const char* fmt, ...) IM_FMTARGS(2)
+    void AddLog(const char* fmt, ...) IM_FMTARGS(2)
     {
-        std::stringstream ss(fmt);
-        std::string token;
         int old_size = logBuf.size();
-        while (std::getline(ss, token, '\n')) {
-            int size = std::snprintf(nullptr, 0, "%s\n", token.c_str());
-            std::string res(size + 1, '\0');
-            std::sprintf(&res[0], "%s\n", token.c_str());
-
-            va_list args;
-            va_start(args, fmt);
-            logBuf.appendfv(res.c_str(), args);
-            va_end(args);
-        }
+        va_list args;
+        va_start(args, fmt);
+        logBuf.appendfv(fmt, args);
+        va_end(args);
         for (int new_size = logBuf.size(); old_size < new_size; old_size++)
             if (logBuf[old_size] == '\n')
                 offsets.push_back(old_size + 1);

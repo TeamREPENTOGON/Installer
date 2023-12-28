@@ -14,7 +14,7 @@ option(BUILD_TESTING "" OFF)
 option(BUILD_CURL_EXE "" OFF)
 option(BUILD_SHARED_LIBS "" OFF)
 option(BUILD_STATIC_LIBS "" ON)
-
+option(ENABLE_THREADED_RESOLVER "" OFF)
 if(LINUX) 
 	option(CURL_USE_OPENSSL "" ON)
 else()
@@ -60,7 +60,6 @@ FILE(GLOB IMGUI_BACKENDS_DIR ${CMAKE_SOURCE_DIR}/libs/imgui/backends/)
 set(IMGUI_BACKENDS_DIR ${CMAKE_SOURCE_DIR}/libs/imgui/backends/)
 add_library(imgui ${IMGUI_SRC} ${IMGUI_BACKENDS_DIR}/imgui_impl_opengl3.cpp ${IMGUI_BACKENDS_DIR}/imgui_impl_opengl3.h ${IMGUI_BACKENDS_DIR}/imgui_impl_opengl3_loader.h ${IMGUI_BACKENDS_DIR}/imgui_impl_glfw.h ${IMGUI_BACKENDS_DIR}/imgui_impl_glfw.cpp)
 target_link_libraries(imgui glfw ${OPENGL_LIBRARY})
-target_compile_options(imgui PUBLIC "/MD")
 
 # Updater
 set(UPDATER_SRC ${CMAKE_SOURCE_DIR}/src/main.cpp ${CMAKE_SOURCE_DIR}/src/LogViewer.h ${CMAKE_SOURCE_DIR}/libs/miniz-3.0.2/miniz.c)

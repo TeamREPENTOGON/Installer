@@ -5,6 +5,7 @@
 #include <miniz.h>
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
+#include <thread>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -26,6 +27,17 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
 LogViewer logViewer;
 bool updating;
 
+std::string trim(const std::string& input) {
+    std::stringstream string_stream;
+    for (const auto character : input) {
+        if (!isspace(character)) {
+            string_stream << character;
+        }
+    }
+
+    return string_stream.str();
+}
+
 bool PerformUpdate() {
     CURL* curl;
     CURLcode res;
@@ -38,7 +50,6 @@ bool PerformUpdate() {
     if (curl) {
         std::string result;
         rapidjson::Document doc;
-
         struct curl_slist* headers = NULL;
 
         headers = curl_slist_append(headers, "Accept: application/vnd.github+json");
@@ -68,9 +79,10 @@ bool PerformUpdate() {
         std::string zip_url;
         for (const auto& asset : doc["assets"].GetArray()) {
 
-            if (std::string("hash.txt").compare(asset["name"].GetString()) == 0)
+            if (std::string("hash.txt").compare(asset["name"].GetString()) == 0) 
                 hash_url = asset["browser_download_url"].GetString();
-            if (std::string("REPENTOGON.zip").compare(asset["name"].GetString()) == 0)
+                
+            if (std::string("REPENTOGON.zip").compare(asset["name"].GetString()) == 0) 
                 zip_url = asset["browser_download_url"].GetString();
         }
 
@@ -79,8 +91,8 @@ bool PerformUpdate() {
             return false;
         }
 
-        logViewer.AddLog("Fetching hash from GitHub...\n");
-        curl_easy_setopt(curl, CURLOPT_URL, hash_url);
+        logViewer.AddLog("Fetching hash...\n");
+        curl_easy_setopt(curl, CURLOPT_URL, hash_url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &repentogon_hash);
 
         res = curl_easy_perform(curl);
@@ -90,8 +102,8 @@ bool PerformUpdate() {
             return false;
         }
 
-        logViewer.AddLog("Downloading release from GitHub...\n");
-        curl_easy_setopt(curl, CURLOPT_URL, zip_url);
+        logViewer.AddLog("Downloading release...\n");
+        curl_easy_setopt(curl, CURLOPT_URL, zip_url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &repentogon_zip);
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
@@ -103,7 +115,7 @@ bool PerformUpdate() {
 
     }
 
-    CryptoPP::StringSource(repentogon_zip, true,
+    CryptoPP::StringSource source = CryptoPP::StringSource(repentogon_zip, true,
         new CryptoPP::HashFilter(sha256,
             new CryptoPP::HexEncoder(
                 new CryptoPP::StringSink(calculated_hash)
@@ -117,7 +129,10 @@ bool PerformUpdate() {
     std::transform(repentogon_hash.begin(), repentogon_hash.end(), repentogon_hash.begin(),
         [](unsigned char c) { return std::tolower(c); });
 
-    if (repentogon_hash.compare(calculated_hash) == 0) {
+    repentogon_hash = trim(repentogon_hash);
+
+    logViewer.AddLog("Hash: %s\n", repentogon_hash.c_str());
+    if (repentogon_hash.compare(calculated_hash) != 0) {
         logViewer.AddLog("Hash mismatch, aborting!\nExpected hash: %s\nCalculated hash: %s\n", repentogon_hash.c_str(), calculated_hash.c_str());
         return false;
     }
@@ -219,6 +234,7 @@ int main() {
                 ImGui::BeginDisabled();
             if (ImGui::Button(updating ? "Installing..." : "Install")) {
                 updating = true;
+                ImGui::BeginDisabled();
                 std::thread downloader(PerformUpdate);
                 downloader.detach();
             }
