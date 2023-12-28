@@ -34,6 +34,8 @@ jobs:
     - name: Calculate SHA256
       shell: powershell
       run: |
+        $PSDefaultParameterValues['*:Encoding'] = 'Default'
+        $OutputEncoding = [System.Text.Utf8Encoding]::new($false)
         cd ${{github.workspace}}/build/Release
         Get-FileHash .\REPENTOGONUpdater.exe | Select-Object -ExpandProperty Hash > hash.txt
     
