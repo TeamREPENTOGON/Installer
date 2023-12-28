@@ -8,19 +8,22 @@
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl2.h"
+#include "imgui_impl_opengl3.h"
+
+#include "LogViewer.h"
+
 #include <stdio.h>
 #include <GLFW/glfw3.h>
 
 using namespace rapidjson;
-
-#define ERROR_DIALOG MessageBoxA(NULL, "Update failed, please see the console for more info.", "REPENTOGON Updater", MB_OK);
 
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
 {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
+
+LogViewer logViewer;
 
 bool PerformUpdate() {
     CURL* curl;
@@ -41,23 +44,21 @@ bool PerformUpdate() {
         headers = curl_slist_append(headers, "X-GitHub-Api-Version: 2022-11-28");
         headers = curl_slist_append(headers, "User-Agent: REPENTOGON");
 
-        curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/TeamREPENTOGON/REPENTOGON/releases/latest");
+        curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/TeamREPENTOGON/ghidra_scripts/releases/latest");
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
-            fprintf(stderr, "Failed to check for updates: %s\n",
+            logViewer.AddLog("Failed to check for updates: %s\n",
                 curl_easy_strerror(res));
-            ERROR_DIALOG;
             return false;
         }
 
         doc.Parse(result.c_str());
-        if (doc["name"].Empty()) {
-            fprintf(stderr, "Failed to fetch latest release from the GitHub API. Returned JSON: %s\n", result.c_str());
-            ERROR_DIALOG;
+        if (!doc.HasMember("name")) {
+            logViewer.AddLog("Failed to fetch latest release from the GitHub API. Returned JSON: %s\n", result.c_str());
             return false;
         }
         result.clear();
@@ -73,32 +74,28 @@ bool PerformUpdate() {
         }
 
         if (hash_url.empty() || zip_url.empty()) {
-            fprintf(stderr, "Unable to fetch URL of release or hash, updater cannot continue.\nHash URL: %s\nZip URL: %s", hash_url.c_str(), zip_url.c_str());
-            ERROR_DIALOG;
+            logViewer.AddLog("Unable to fetch URL of release or hash, updater cannot continue.\nHash URL: %s\nZip URL: %s", hash_url.c_str(), zip_url.c_str());
             return false;
         }
 
-        printf("Fetching hash from GitHub...\n");
+        logViewer.AddLog("Fetching hash from GitHub...\n");
         curl_easy_setopt(curl, CURLOPT_URL, hash_url);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &repentogon_hash);
 
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
-            fprintf(stderr, "Failed to download hash: %s\n",
+            logViewer.AddLog("Failed to download hash: %s\n",
                 curl_easy_strerror(res));
-            ERROR_DIALOG;
             return false;
         }
-        printf("Hash: %s\n", repentogon_hash.c_str());
 
-        printf("Downloading release from GitHub...\n");
+        logViewer.AddLog("Downloading release from GitHub...\n");
         curl_easy_setopt(curl, CURLOPT_URL, zip_url);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &repentogon_zip);
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
-            fprintf(stderr, "Failed to download release: %s\n",
+            logViewer.AddLog("Failed to download release: %s\n",
                 curl_easy_strerror(res));
-            ERROR_DIALOG;
             return false;
         }
         curl_easy_cleanup(curl);
@@ -119,9 +116,10 @@ bool PerformUpdate() {
     std::transform(repentogon_hash.begin(), repentogon_hash.end(), repentogon_hash.begin(),
         [](unsigned char c) { return std::tolower(c); });
 
+    logViewer.AddLog("Hash: %s\n", repentogon_hash.c_str());
+    printf("%s\n", repentogon_hash.c_str());
     if (repentogon_hash.compare(calculated_hash) == 0) {
-        fprintf(stderr, "Hash mismatch, aborting!\nExpected hash: %s\nCalculated hash: %s\n", repentogon_hash.c_str(), calculated_hash.c_str());
-        ERROR_DIALOG;
+        logViewer.AddLog("Hash mismatch, aborting!\nExpected hash: %s\nCalculated hash: %s\n", repentogon_hash.c_str(), calculated_hash.c_str());
         return false;
     }
 
@@ -132,8 +130,7 @@ bool PerformUpdate() {
 
     status = mz_zip_reader_init_mem(&archive, repentogon_zip.c_str(), repentogon_zip.size(), 0);
     if (!status) {
-        fprintf(stderr, "Downloaded zip file is invalid or corrupt, aborting.\n");
-        ERROR_DIALOG;
+        logViewer.AddLog("Downloaded zip file is invalid or corrupt, aborting.\n");
         return false;
     }
 
@@ -141,9 +138,8 @@ bool PerformUpdate() {
         mz_zip_archive_file_stat file_stat;
 
         if (!mz_zip_reader_file_stat(&archive, i, &file_stat)) {
-            fprintf(stderr, "Failed to read file, aborting.\n");
+            logViewer.AddLog("Failed to read file, aborting.\n");
             mz_zip_reader_end(&archive);
-            ERROR_DIALOG;
             return false;
         }
 
@@ -152,9 +148,8 @@ bool PerformUpdate() {
         else {
             int res = mz_zip_reader_extract_to_file(&archive, i, file_stat.m_filename, 0);
             if (!res) {
-                fprintf(stderr, "Failed to extract %s, aborting.\n", file_stat.m_filename);
+                logViewer.AddLog("Failed to extract %s, aborting.\n", file_stat.m_filename);
                 mz_zip_reader_end(&archive);
-                ERROR_DIALOG;
                 return false;
             }
         }
@@ -162,13 +157,89 @@ bool PerformUpdate() {
 
     mz_zip_reader_end(&archive);
 
-    if (MessageBoxA(NULL, "Update complete! Restart game?", "REPENTOGON Updater", MB_YESNO)) {
+    //if (MessageBoxA(NULL, "Update complete! Restart game?", "REPENTOGON Updater", MB_YESNO)) {
+    if (true) {
         //TODO relaunch isaac
-    };
+    }
 
     return true;
 }
 
+static void glfw_error_callback(int error, const char* description) {
+    logViewer.AddLog("GLFW Error %d: %s\n", error, description);
+}
+
 int main() { 
-    return PerformUpdate();
+    glfwSetErrorCallback(glfw_error_callback);
+
+    if (!glfwInit())
+        return 1;
+
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
+    GLFWwindow* window = glfwCreateWindow(1024, 600, "REPENTOGON Installer", nullptr, nullptr);
+    if (window == nullptr)
+        return 1;
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    while (!glfwWindowShouldClose(window))
+    {
+        glfwPollEvents();
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        {
+
+            ImGui::Begin("Installer", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);                          // Create a window called "Hello, world!" and append into it.
+            ImGui::SetWindowPos(ImVec2(0, 0));
+            ImGui::SetWindowSize(ImVec2(1024, 300));
+
+            ImGui::Text("Welcome to the REPENTOGON Installer!");
+
+            if (ImGui::Button("Begin")) {
+                if (PerformUpdate()) {
+                    logViewer.AddLog("hell yeah\n");
+                }
+            }
+
+            ImGui::End();
+
+        }
+
+        logViewer.Draw();
+
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(window);
+    }
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    return 0;
 }

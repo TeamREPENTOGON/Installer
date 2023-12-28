@@ -4,8 +4,10 @@ set ("CMAKE_CXX_STANDARD" 17)
 
 project(REPENTOGONUpdater)
 
+find_package( OpenGL REQUIRED )
+
 include_directories("${CMAKE_SOURCE_DIR}/libs/rapidjson/include/rapidjson" "${CMAKE_SOURCE_DIR}/libs/miniz-3.0.2" 
-"${CMAKE_SOURCE_DIR}/libs/imgui" "${CMAKE_SOURCE_DIR}/libs/imgui/backends")
+"${CMAKE_SOURCE_DIR}/libs/imgui" "${CMAKE_SOURCE_DIR}/libs/imgui/backends" ${OPENGL_INCLUDE_DIRS})
 
 # libcurl
 option(BUILD_TESTING "" OFF)
@@ -40,20 +42,27 @@ add_subdirectory("libs/curl")
 option(CRYPTOPP_BUILD_TESTING "" OFF)
 add_subdirectory("libs/cryptopp-cmake")
 
+# GLFW
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory("libs/glfw")
+link_libraries(${GLFW_LIBRARY_DIRS})
+
+if( MSVC )
+    SET( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:mainCRTStartup" )
+endif()
+
 # Dear ImGui
 FILE(GLOB IMGUI_SRC ${CMAKE_SOURCE_DIR}/libs/imgui/*.cpp)
 FILE(GLOB IMGUI_BACKENDS_DIR ${CMAKE_SOURCE_DIR}/libs/imgui/backends/)
 set(IMGUI_BACKENDS_DIR ${CMAKE_SOURCE_DIR}/libs/imgui/backends/)
-add_library(imgui ${IMGUI_SRC} ${IMGUI_BACKENDS_DIR}/imgui_impl_opengl3.cpp ${IMGUI_BACKENDS_DIR}/imgui_impl_opengl3.h ${IMGUI_BACKENDS_DIR}/imgui_impl_opengl3_loader.h ${IMGUI_BACKENDS_DIR}/imgui_impl_win32.h ${IMGUI_BACKENDS_DIR}/imgui_impl_win32.cpp)
+add_library(imgui ${IMGUI_SRC} ${IMGUI_BACKENDS_DIR}/imgui_impl_opengl3.cpp ${IMGUI_BACKENDS_DIR}/imgui_impl_opengl3.h ${IMGUI_BACKENDS_DIR}/imgui_impl_opengl3_loader.h ${IMGUI_BACKENDS_DIR}/imgui_impl_glfw.h ${IMGUI_BACKENDS_DIR}/imgui_impl_glfw.cpp)
+target_link_libraries(imgui glfw ${OPENGL_LIBRARY})
 target_compile_options(imgui PUBLIC "/MD")
 
-# GLFW
-option(GLFW_BUILD_TESTS "" OFF)
-option(GLFW_BUILD_EXAMPLES "" OFF)
-option(GLFW_BUILD_DOCS "" OFF)
-add_subdirectory("libs/glfw")
-
 # Updater
-set(UPDATER_SRC ${CMAKE_SOURCE_DIR}/src/main.cpp ${CMAKE_SOURCE_DIR}/libs/miniz-3.0.2/miniz.c)
+set(UPDATER_SRC ${CMAKE_SOURCE_DIR}/src/main.cpp ${CMAKE_SOURCE_DIR}/src/LogViewer.h ${CMAKE_SOURCE_DIR}/libs/miniz-3.0.2/miniz.c)
 add_executable(REPENTOGONUpdater ${UPDATER_SRC})
-target_link_libraries(REPENTOGONUpdater libcurl cryptopp imgui glfw)
+target_link_libraries(REPENTOGONUpdater libcurl cryptopp imgui glfw ${OPENGL_LIBRARY})
