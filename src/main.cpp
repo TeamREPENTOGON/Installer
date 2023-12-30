@@ -71,7 +71,7 @@ bool PerformUpdate(int argc, char* argv[]) {
         headers = curl_slist_append(headers, "X-GitHub-Api-Version: 2022-11-28");
         headers = curl_slist_append(headers, "User-Agent: REPENTOGON");
 
-        curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/TeamREPENTOGON/ghidra_scripts/releases/latest");
+        curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/TeamREPENTOGON/REPENTOGON/releases/latest");
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
