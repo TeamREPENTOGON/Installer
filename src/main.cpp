@@ -185,8 +185,8 @@ static void glfw_error_callback(int error, const char* description) {
     logViewer.AddLog("GLFW Error %d: %s\n", error, description);
 }
 
-int main() { 
-
+int main(int argc, char* argv[]) {
+    #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 
     glfwSetErrorCallback(glfw_error_callback);
 
