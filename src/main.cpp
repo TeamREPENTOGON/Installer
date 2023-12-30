@@ -6,7 +6,6 @@
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
 #include <thread>
-#include <strings.h>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
