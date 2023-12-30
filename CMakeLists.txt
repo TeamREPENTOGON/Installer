@@ -15,10 +15,10 @@ option(BUILD_CURL_EXE "" OFF)
 option(BUILD_SHARED_LIBS "" OFF)
 option(BUILD_STATIC_LIBS "" ON)
 option(ENABLE_THREADED_RESOLVER "" OFF)
-if(LINUX) 
-	option(CURL_USE_OPENSSL "" ON)
-else()
+if(WIN32)
 	option(CURL_USE_SCHANNEL "" ON)
+else()
+	option(CURL_USE_OPENSSL "" ON)
 endif()
 
 # Disable everything except HTTPS, we don't need to compile most of this.

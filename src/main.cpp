@@ -6,6 +6,7 @@
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
 #include <thread>
+#include <strings.h>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -25,7 +26,11 @@ static bool HasCommandLineArgument(int argc, char* argv[], const char* arg)
 {
     for (int i = 1; i < argc; ++i)
     {
+        #ifdef _WIN32
         if (_stricmp(argv[i], arg) == 0) return true;
+	#else
+	if(strcasecmp(argv[i], arg) == 0) return true;
+	#endif
     }
 
     return false;
