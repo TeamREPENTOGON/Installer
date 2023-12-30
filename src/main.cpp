@@ -18,6 +18,19 @@
 
 using namespace rapidjson;
 
+static int argc = 0;
+static char** argv = NULL;
+
+static bool HasCommandLineArgument(int argc, char* argv[], const char* arg)
+{
+    for (int i = 1; i < argc; ++i)
+    {
+        if (_stricmp(argv[i], arg) == 0) return true;
+    }
+
+    return false;
+}
+
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
 {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
@@ -26,6 +39,7 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
 
 LogViewer logViewer;
 bool updating;
+bool automatic = false;
 
 std::string trim(const std::string& input) {
     std::stringstream string_stream;
@@ -38,7 +52,8 @@ std::string trim(const std::string& input) {
     return string_stream.str();
 }
 
-bool PerformUpdate() {
+bool PerformUpdate(int argc, char* argv[]) {
+
     CURL* curl;
     CURLcode res;
     std::string repentogon_zip;
@@ -171,10 +186,18 @@ bool PerformUpdate() {
 
     mz_zip_reader_end(&archive);
 
-    //if (MessageBoxA(NULL, "Update complete! Restart game?", "REPENTOGON Updater", MB_YESNO)) {
-    if (true) {
-        //TODO relaunch isaac
+    #ifdef _WIN32
+    if (automatic) {
+        std::string args;
+
+        for (int i = 1; i < argc; ++i) {
+            args.append(argv[i]).append(" ");
+           
+        }
+        ShellExecute(NULL, "open", "isaac-ng.exe", args.c_str(), NULL, SW_SHOWDEFAULT);
+        ExitProcess(1);
     }
+    #endif
 
     logViewer.AddLog("Finished!\n");
     updating = false;
@@ -186,7 +209,12 @@ static void glfw_error_callback(int error, const char* description) {
 }
 
 int main(int argc, char* argv[]) {
-    #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+  //  #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+
+    #ifdef _WIN32
+    if (HasCommandLineArgument(argc, argv, "-auto"))
+        automatic = true;
+    #endif
 
     glfwSetErrorCallback(glfw_error_callback);
 
@@ -232,12 +260,15 @@ int main(int argc, char* argv[]) {
 
             if (updating)
                 ImGui::BeginDisabled();
-            if (ImGui::Button(updating ? "Installing..." : "Install")) {
+            if (ImGui::Button(updating ? "Installing..." : "Install") || automatic) {
+                if (!updating) {
+                    std::thread downloader(PerformUpdate, argc, argv);
+                    ImGui::BeginDisabled();
+                    downloader.detach();
+                }
                 updating = true;
-                ImGui::BeginDisabled();
-                std::thread downloader(PerformUpdate);
-                downloader.detach();
             }
+
             if (updating)
                 ImGui::EndDisabled();
 
