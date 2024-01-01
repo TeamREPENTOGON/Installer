@@ -179,9 +179,18 @@ bool PerformUpdate(int argc, char* argv[]) {
         if (mz_zip_reader_is_file_a_directory(&archive, i))
             std::filesystem::create_directory(file_stat.m_filename);
         else {
-            int res = mz_zip_reader_extract_to_file(&archive, i, file_stat.m_filename, 0);
-            if (!res) {
-                logViewer.AddLog("Failed to extract %s, aborting.\n", file_stat.m_filename);
+            int attempts = 5;
+            bool extracted = false;
+            for (int i = 0; i < attempts; ++i) {
+                int res = mz_zip_reader_extract_to_file(&archive, i, file_stat.m_filename, 0);
+                if (res) {
+                    extracted = true;
+                    break;
+                }
+            } 
+
+            if (!extracted) {
+                logViewer.AddLog("Failed to extract %s after %d attempts, aborting.\n", file_stat.m_filename, attempts);
                 mz_zip_reader_end(&archive);
                 return false;
             }
@@ -213,7 +222,7 @@ static void glfw_error_callback(int error, const char* description) {
 }
 
 int main(int argc, char* argv[]) {
-  //  #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+    #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 
     #ifdef _WIN32
     if (HasCommandLineArgument(argc, argv, "-auto"))
