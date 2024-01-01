@@ -167,33 +167,34 @@ bool PerformUpdate(int argc, char* argv[]) {
         return false;
     }
 
-    for (int i = 0; i < (int)mz_zip_reader_get_num_files(&archive); ++i) {
+    for (int i = 0; i < (int)mz_zip_reader_get_num_files(&archive); i++) {
         mz_zip_archive_file_stat file_stat;
-        logViewer.AddLog("Extracting %s\n", file_stat.m_filename);
         if (!mz_zip_reader_file_stat(&archive, i, &file_stat)) {
             logViewer.AddLog("Failed to read file, aborting.\n");
             mz_zip_reader_end(&archive);
             return false;
         }
+        logViewer.AddLog("Extracting %s\n", file_stat.m_filename);
 
-        if (mz_zip_reader_is_file_a_directory(&archive, i))
-            std::filesystem::create_directory(file_stat.m_filename);
-        else {
-            int attempts = 5;
-            bool extracted = false;
-            for (int i = 0; i < attempts; ++i) {
-                int res = mz_zip_reader_extract_to_file(&archive, i, file_stat.m_filename, 0);
-                if (res) {
-                    extracted = true;
-                    break;
-                }
-            } 
+        std::string name = file_stat.m_filename;
+        bool needs_dir = name.find("/") != name.npos;
 
-            if (!extracted) {
-                logViewer.AddLog("Failed to extract %s after %d attempts, aborting.\n", file_stat.m_filename, attempts);
-                mz_zip_reader_end(&archive);
-                return false;
+        std::filesystem::create_directories(std::filesystem::path(std::string("./" + std::string(file_stat.m_filename))).parent_path());
+
+        int attempts = 5;
+        bool extracted = false;
+        for (int i = 0; i < attempts; ++i) {
+            int res = mz_zip_reader_extract_to_file(&archive, i, file_stat.m_filename, 0);
+            if (res) {
+                extracted = true;
+                break;
             }
+        } 
+
+        if (!extracted) {
+            logViewer.AddLog("Failed to extract %s after %d attempts, aborting.\n", file_stat.m_filename, attempts);
+            mz_zip_reader_end(&archive);
+            return false;
         }
     }
 
