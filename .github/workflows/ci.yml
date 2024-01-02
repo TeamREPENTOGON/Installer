@@ -47,7 +47,7 @@ jobs:
       uses: MCKanpolat/auto-semver-action@1.0.5
       id: versioning
       with:
-        releaseType: minor
+        releaseType: patch
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload release
