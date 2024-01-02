@@ -41,7 +41,6 @@ jobs:
       run: |
         $PSDefaultParameterValues['*:Encoding'] = 'Default'
         $OutputEncoding = [System.Text.Utf8Encoding]::new($false)
-        cd ${{github.workspace}}/build/Release
         Get-FileHash .\REPENTOGONUpdater.exe | Select-Object -ExpandProperty Hash > hash.txt
     
     - name: Determine next build number
@@ -55,7 +54,7 @@ jobs:
       uses: ncipollo/release-action@v1
       if: "contains(github.event.head_commit.message, 'chore: release') && github.event_name != 'pull_request'"
       with:
-        artifacts: "${{github.workspace}}/build/Release/REPENTOGONUpdater.exe,${{github.workspace}}/build/Release/hash.txt"
+        artifacts: "REPENTOGONUpdater.exe,hash.txt"
         tag: ${{steps.versioning.outputs.version}}
         token: ${{ secrets.GITHUB_TOKEN }}
           
@@ -63,6 +62,6 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: REPENTOGONInstaller
-        path: ${{github.workspace}}/build/Release/REPENTOGONUpdater.exe
+        path: REPENTOGONUpdater.exe
         retention-days: 30
 
