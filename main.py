@@ -73,7 +73,7 @@ def perform_install():
             new_args.remove("-auto")
             new_args.insert(0, "isaac-ng.exe")
             subprocess.Popen(new_args, start_new_session=True)
-            os._exit()
+            os._exit(0)
 
     except Exception as e:
         print(e)
