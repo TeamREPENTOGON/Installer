@@ -8,6 +8,7 @@ import zipfile
 import io
 import subprocess
 import sys
+import os
 
 window = tk.Tk()
 
@@ -20,7 +21,7 @@ def perform_install():
     global textbox
     global button
 
-    textbox.insert("end", "Fetching latest release from GitHub...\\n")
+    textbox.insert("end", "Fetching latest release from GitHub...\n")
     try:
         with requests.get(
             "https://api.github.com/repos/TeamREPENTOGON/REPENTOGON/releases/latest",
@@ -41,26 +42,26 @@ def perform_install():
             if asset["name"] == "REPENTOGON.zip":
                 zip_url = asset["browser_download_url"]
 
-        textbox.insert("end", "Fetching hash...\\n")
+        textbox.insert("end", "Fetching hash...\n")
 
         with requests.get(hash_url) as r:
             hash = r.text.lower().rstrip()
 
         hash = r.text.lower().rstrip()
 
-        textbox.insert("end", "Downloading...\\n")
+        textbox.insert("end", "Downloading...\n")
         with requests.get(zip_url, stream=True) as r:
             zip = io.BytesIO(r.content)
 
-        textbox.insert("end", "Hashing...\\n")
+        textbox.insert("end", "Hashing...\n")
         calculated_hash = hashlib.sha256(zip.getbuffer()).hexdigest()
 
         if hash != calculated_hash:
             raise Exception(
-                f"Invalid hash, download is corrupt!\\nExpected hash: {hash}\\nCalculated hash: {calculated_hash}"
+                f"Invalid hash, download is corrupt!\nExpected hash: {hash}\nCalculated hash: {calculated_hash}"
             )
 
-        textbox.insert("end", "Extracting...\\n")
+        textbox.insert("end", "Extracting...\n")
 
         with zipfile.ZipFile(zip, "r") as zip_ref:
             zip_ref.extractall()
@@ -71,13 +72,12 @@ def perform_install():
             new_args = sys.argv
             new_args.remove("-auto")
             new_args.insert(0, "isaac-ng.exe")
-            print(" ".join(new_args))
             subprocess.Popen(new_args, start_new_session=True)
-            sys.exit()
+            os._exit()
 
     except Exception as e:
         print(e)
-        textbox.insert("end", "Failed to install!\\n" + str(e) + "\\n")
+        textbox.insert("end", "Failed to install!\n" + str(e) + "\n")
     button["state"] = "normal"
     button["text"] = "Install"
 
