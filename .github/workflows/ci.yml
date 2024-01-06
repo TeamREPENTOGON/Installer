@@ -33,7 +33,7 @@ jobs:
 
     - name: Build
       run: |
-        pyinstaller --onefile main.py
+        pyinstaller --onefile --noconsole main.py
         mv dist/main.exe REPENTOGONUpdater.exe
 
     - name: Calculate SHA256
