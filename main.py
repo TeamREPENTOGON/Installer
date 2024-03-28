@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 import requests
 import json
 import threading
@@ -9,6 +10,7 @@ import io
 import subprocess
 import sys
 import os
+import configparser
 
 window = tk.Tk()
 
@@ -70,6 +72,28 @@ def perform_install():
 
         with zipfile.ZipFile(zip, "r") as zip_ref:
             zip_ref.extractall()
+
+        if not os.path.isfile("dsound.ini"):
+            textbox.insert("end", "Creating dsound.ini...\n")
+            config = configparser.ConfigParser()
+            config.optionxform = str
+
+            config["Options"] = {
+                "CheckForUpdates": (
+                    "1"
+                    if messagebox.askquestion(
+                        "REPENTOGON Updater",
+                        "Would you like REPENTOGON to automatically check for updates on game start?\n(We highly recommend saying yes here, we're probably gonna have a lot of them.)",
+                    )
+                    == "yes"
+                    else "0"
+                )
+            }
+
+            config["internal"] = {"RanUpdater": "0"}
+
+            with open("dsound.ini", "w") as configfile:
+                config.write(configfile)
 
         textbox.insert("end", "Finished!")
 
