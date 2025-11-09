@@ -95,15 +95,27 @@ def perform_install():
 
             with open("dsound.ini", "w") as configfile:
                 config.write(configfile)
-
+        if getattr(sys, 'frozen', False):
+            # Running as compiled executable
+            BASE_DIR = os.path.dirname(sys.executable)
+        else:
+            # Running as script
+            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        
+        os.chdir(BASE_DIR)
         textbox.insert("end", "Finished! \n")
-        target = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "REPENTOGONLauncher", "REPENTOGONLauncher.exe"))
+        target = os.path.abspath(os.path.join(BASE_DIR, "REPENTOGONLauncher", "REPENTOGONLauncher.exe"))
         textbox.insert("end", "Launcher installed to: " + target  + "\n")
         if os.name == "nt":  # check if win create desktop shortcut to the launcher if not pengu
             import win32com.client
             desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+            if not os.path.exists(desktop):
+                desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+                if not os.path.exists(desktop):
+                    onedrive = os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop")
+                    if os.path.exists(onedrive):
+                        desktop = onedrive
             shortcut_path = os.path.join(desktop, "REPENTOGON.lnk")
-            
             shell = win32com.client.Dispatch('WScript.Shell')
             shortcut = shell.CreateShortCut(shortcut_path)
             shortcut.Targetpath = target
