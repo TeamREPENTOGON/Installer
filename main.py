@@ -16,8 +16,8 @@ window = tk.Tk()
 
 textbox = tk.Text()
 textbox.bind("<Key>", lambda e: "break")
-install_button = tk.Button(text="Install")
-uninstall_button = tk.Button(text="Uninstall")
+install_button = tk.Button(text="Install Repentogon Launcher")
+uninstall_button = tk.Button(text="Uninstall old Repentogon")
 
 
 def perform_install():
@@ -27,11 +27,12 @@ def perform_install():
 
     try:
         if not os.path.isfile("isaac-ng.exe"):
+            messagebox.showinfo("That's not where this goes!", "Installation must be performed from the game's directory!")
             raise Exception("Installation must be performed from the game's directory!")
 
         textbox.insert("end", "Fetching latest release from GitHub...\n")
         with requests.get(
-            "https://api.github.com/repos/TeamREPENTOGON/REPENTOGON/releases/latest",
+            "https://api.github.com/repos/TeamREPENTOGON/Launcher/releases/latest", #no longer downloads rgon, it moves you towards the launcher, which now downloads rgon, if you want to play rgon on rep just manually download and install the latest repentance rgon version (1.0.12e)
             headers={
                 "User-Agent": "REPENTOGON",
                 "Accept": "application/vnd.github+json",
@@ -46,7 +47,7 @@ def perform_install():
         for asset in doc["assets"]:
             if asset["name"] == "hash.txt":
                 hash_url = asset["browser_download_url"]
-            if asset["name"] == "REPENTOGON.zip":
+            if asset["name"] == "REPENTOGONLauncher.zip":
                 zip_url = asset["browser_download_url"]
 
         textbox.insert("end", "Fetching hash...\n")
@@ -71,7 +72,7 @@ def perform_install():
         textbox.insert("end", "Extracting...\n")
 
         with zipfile.ZipFile(zip, "r") as zip_ref:
-            zip_ref.extractall()
+            zip_ref.extractall("REPENTOGONLauncher") # added path so it doesnt extract directly to the game folder, which can be problematic for the launcher
 
         if not os.path.isfile("dsound.ini"):
             textbox.insert("end", "Creating dsound.ini...\n")
@@ -95,21 +96,36 @@ def perform_install():
             with open("dsound.ini", "w") as configfile:
                 config.write(configfile)
 
-        textbox.insert("end", "Finished!")
-
-        if len(sys.argv) > 1 and "-auto" in sys.argv:
-            new_args = sys.argv
-            new_args.remove("-auto")
-            new_args.insert(0, "isaac-ng.exe")
-            subprocess.Popen(new_args, start_new_session=True)
-            os._exit(0)
+        textbox.insert("end", "Finished! \n")
+        target = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "REPENTOGONLauncher", "REPENTOGONLauncher.exe"))
+        textbox.insert("end", "Launcher installed to: " + target  + "\n")
+        if os.name == "nt":  # check if win create desktop shortcut to the launcher if not pengu
+            import win32com.client
+            desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+            shortcut_path = os.path.join(desktop, "REPENTOGON.lnk")
+            
+            shell = win32com.client.Dispatch('WScript.Shell')
+            shortcut = shell.CreateShortCut(shortcut_path)
+            shortcut.Targetpath = target
+            shortcut.WorkingDirectory = os.path.dirname(target)
+            shortcut.IconLocation = target
+            shortcut.save()	
+            messagebox.showinfo("New Repentogon Launcher!", "From now on, you should use the RepentogonLauncher to play Repentogon!, a shortcut to it has been added to your desktop!. \n MAKE SURE TO GET REPENTANCE+ BEFORE RUNNING IT! \n For more info Check our Guide in Repentogon.com!")
+        else:
+            messagebox.showinfo("New Repentogon Launcher!", "From now on, you should use the RepentogonLauncher to play Repentogon!, \n MAKE SURE TO GET REPENTANCE+ BEFORE RUNNING IT! \n For more info Check our Linux Guide in Repentogon.com!")
+		#if len(sys.argv) > 1 and "-auto" in sys.argv:
+        #    new_args = sys.argv
+        #    new_args.remove("-auto")
+        #    new_args.insert(0, "isaac-ng.exe")
+        #    subprocess.Popen(new_args, start_new_session=True)
+        #    os._exit(0)
 
     except Exception as e:
         textbox.insert("end", "Failed to install!\n" + str(e) + "\n")
 
-    install_button["state"] = "normal"
+    install_button["state"] = "disabled"
     uninstall_button["state"] = "normal"
-    install_button["text"] = "Install"
+    install_button["text"] = "Install Repentogon Launcher"
 
 
 def perform_uninstall():
@@ -180,7 +196,7 @@ def install():
 
     install_button["state"] = "disabled"
     uninstall_button["state"] = "disabled"
-    install_button["text"] = "Installing..."
+    install_button["text"] = "Installing REPENTOGON Launcher..."
     textbox.delete(1.0, tk.END)
     t = threading.Thread(target=perform_install, daemon=True)
     t.start()
